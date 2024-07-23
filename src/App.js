@@ -1,22 +1,34 @@
 import React from "react";
-import Navbar from "./components/Navbar";
-import HomePage from "./components/HomePage";
-import UserProfile from "./components/UserProfile";
-import Events from "./components/Events";
-import PracticalInfo from "./components/PracticalInfo";
-import Additional from "./components/AdditionalFeatures";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import Navbar from "./pages/Navbar";
+import HomePage from "./pages/HomePage";
+import Events from "./pages/Events";
+import Register from "./pages/Register";
+import Footer from "./pages/footer";
 
-function App() {
+const App = () => {
+  const router = createBrowserRouter([
+    {
+      path: "/",
+      element: <HomePage />,
+    },
+    {
+      path: "/eventos",
+      element: <Events />,
+    },
+    {
+      path: "/register",
+      element: <Register />,
+    },
+  ]);
+
   return (
     <div>
-      <Navbar />
-      <HomePage />
-      <UserProfile />
-      <Events />
-      <PracticalInfo />
-      <Additional/>
+      <Navbar /> {/* Componente de la barra de navegación */}
+      <RouterProvider router={router} />
+      <Footer /> {/* Componente del pie de página */}
     </div>
   );
-}
-  
+};
+
 export default App;
