@@ -1,63 +1,37 @@
-const express = require("express"); //inicializar la app con express 
-const mongoose = require("mongoose"); // Inicializar la conexión a MongoDB
-const cors = require("cors"); // default cors- importa cors 
-const app = express(); //crear la app backend con el metodo express 
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const session = require("express-session");
 
-//configuracion  
-const PORT =  process.env.PORT || 3001; // crear un puerto, se toma desde la variable de entorno
+const app = express();
 
-//escuchar la solicitud POST desde nuestros frontend en ruta /register
-app.post("/Register", (req, res) => {
-  console.log("Body de request", req.body);
-  if(req.body) {
-  res.send({message: "Recibimos tu registro"})
-} else {
-  res.send({ message: "No recibimos tu registro" })
-}
+// Configuración
+const PORT = process.env.PORT || 3001;
+const JWT_SECRET = "tu_jwt_secreto"; // todo Guardar  en un archivo .env para producción
 
-});
-
-// Inicializar el servidor, la aplicacion escucha el puerto que configuramos 
-//con el metodo listen (puerto, callback)
-
-app.listen(PORT, () => {
-  console.log(`Servidor ejecutándose en en el puerto ${PORT}`);
-}); 
-
-
-// Middleware para parsear JSON
+// Middleware para parsear JSON y habilitar CORS
 app.use(express.json());
+app.use(cors());
+app.use(session({
+  secret: "tu_secreto_de_sesion",
+  resave: false,
+  saveUninitialized: true,
+}));
 
-// Habilitar CORS para permitir peticiones desde diferentes dominios
-app.use( cors());
-
- // Definir las rutas de la API
- //...
-
-
-
-// Importar las rutas de los eventos
-const eventsRouter = require("./routes/events");
-app.use("/api/events", eventsRouter);
-
-
-// Conectar a MongoDB Atlas (cadena de conexion)
-
+// Conectar a MongoDB Atlas
 const uri = `mongodb+srv://${process.env.DB_USUARIO}:${process.env.DB_PASSWORD}@${process.env.DB_DOMAIN}/${process.env.DB_NAME}?appName=${process.env.DB_CLUSTER}`;
 const clientOptions = { serverApi: { version: '1', strict: true, deprecationErrors: true } };
 
 mongoose
-  .connect(uri)
+  .connect(uri, clientOptions)
   .then(() => {
     console.log("Conexión a MongoDB exitosa");
   })
   .catch((error) => {
     console.error("Error conectando a MongoDB:", error);
   });
-
-//const uri =
-  //"mongodb+srv://jessicaescobar:<guiaasun123>@cluster0.btnlqis.mongodb.net/";
-  
 
 // Definir un esquema y un modelo
 const userSchema = new mongoose.Schema({
@@ -69,10 +43,13 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model("User", userSchema);
 
 // Rutas
+
+// Registro de usuario
 app.post("/register", async (req, res) => {
   const { name, email, password } = req.body;
   try {
-    const user = new User({ name, email, password });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({ name, email, password: hashedPassword });
     await user.save();
     res.status(201).json({ message: "Usuario registrado exitosamente", user });
   } catch (error) {
@@ -80,4 +57,57 @@ app.post("/register", async (req, res) => {
   }
 });
 
+// Inicio de sesión de usuario
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "Usuario no encontrado" });
+    }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Contraseña incorrecta" });
+    }
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: "1h" });
+    req.session.token = token;
+    res.json({ message: "Inicio de sesión exitoso", token });
+  } catch (error) {
+    res.status(400).json({ message: "Error al iniciar sesión", error });
+  }
+});
 
+// Middleware de autenticación
+const authenticate = (req, res, next) => {
+  const token = req.session.token;
+  if (!token) {
+    return res.status(401).json({ message: "Acceso denegado" });
+  }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.userId;
+    next();
+  } catch (error) {
+    res.status(401).json({ message: "Token no válido" });
+  }
+};
+
+// Rutas protegidas
+app.get("/protected", authenticate, (req, res) => {
+  res.json({ message: "Ruta protegida accesible" });
+});
+
+// Cerrar sesión
+app.post("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ message: "Error al cerrar sesión" });
+    }
+    res.json({ message: "Cierre de sesión exitoso" });
+  });
+});
+
+// Inicializar el servidor
+app.listen(PORT, () => {
+  console.log(`Servidor ejecutándose en en el puerto ${PORT}`);
+});

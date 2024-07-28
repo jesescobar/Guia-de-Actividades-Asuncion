@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -7,6 +9,8 @@ const Register = () => {
     password: "",
   });
 
+  const navigate = useNavigate();
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -14,24 +18,29 @@ const Register = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(formData);
+    try {
+      const response = await axios.post("http://localhost:3001/register", formData);
+      if (response.status === 201) {
+        alert("Registro exitoso");
+        navigate("/login");
+      } else {
+        alert("Error en el registro");
+      }
+    } catch (error) {
+      console.error("Error en el registro", error);
+      alert("Error en el registro");
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      {}
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        {}
         <h2 className="text-2xl font-bold mb-6 text-center">Regístrate</h2>
-        {}
         <form onSubmit={handleSubmit}>
-          {}
           <div className="mb-4">
-            {}
             <label className="block text-gray-700">Nombre</label>
-            {}
             <input
               type="text"
               name="name"
@@ -42,9 +51,7 @@ const Register = () => {
             />
           </div>
           <div className="mb-4">
-            {}
             <label className="block text-gray-700">Correo Electrónico</label>
-            {}
             <input
               type="email"
               name="email"
@@ -55,9 +62,7 @@ const Register = () => {
             />
           </div>
           <div className="mb-6">
-            {}
             <label className="block text-gray-700">Contraseña</label>
-            {}
             <input
               type="password"
               name="password"

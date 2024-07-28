@@ -4,6 +4,7 @@ import Navbar from "./pages/Navbar";
 import HomePage from "./pages/HomePage";
 import Events from "./pages/Events";
 import Register from "./pages/Register";
+import UserProfile from "./pages/UserProfile";
 import Footer from "./pages/footer";
 
 const App = () => {
@@ -19,6 +20,10 @@ const App = () => {
     {
       path: "/register",
       element: <Register />,
+    },
+    {
+      path: "/UserProfile",
+      element: <UserProfile />,
     },
   ]);
 
